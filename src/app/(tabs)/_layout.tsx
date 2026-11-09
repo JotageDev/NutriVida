@@ -1,41 +1,13 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function TabsLayout() {
+export default function TabLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-
-        tabBarActiveTintColor: "#43A047",
-
-        tabBarInactiveTintColor: "#7A858B",
-
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-
-          borderTopColor: "#E2E7DF",
-
-          borderTopWidth: 1,
-
-          height: 68,
-
-          paddingTop: 7,
-
-          paddingBottom: 8,
-        },
-
-        tabBarLabelStyle: {
-          fontSize: 12,
-        },
-      }}
-    >
-      {/* HOME */}
+    <Tabs>
       <Tabs.Screen
         name="home"
         options={{
           title: "Início",
-
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="home-outline"
@@ -46,12 +18,24 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ALIMENTOS */}
+      <Tabs.Screen
+        name="calculadora"
+        options={{
+          title: "Calcular",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="calculator-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="alimentos"
         options={{
           title: "Alimentos",
-
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="nutrition-outline"
@@ -62,12 +46,10 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* AGENDA */}
       <Tabs.Screen
         name="agenda"
         options={{
           title: "Agenda",
-
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="calendar-outline"
@@ -78,12 +60,10 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* PERFIL */}
       <Tabs.Screen
         name="perfil"
         options={{
           title: "Perfil",
-
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="person-outline"
