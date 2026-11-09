@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -14,9 +13,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import api from "../../services/api";
 import colors from "../../constants/colors";
@@ -46,43 +43,43 @@ export default function Agenda() {
   const [mostrarData, setMostrarData] = useState(false);
   const [mostrarHorario, setMostrarHorario] = useState(false);
 
-  // Formata a data para YYYY-MM-DD
+  const [modalExcluirVisivel, setModalExcluirVisivel] = useState(false);
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState<number | null>(null);
+
+  function mostrarAviso(titulo: string, mensagem: string) {
+    if (Platform.OS === "web") {
+      window.alert(`${titulo}\n\n${mensagem}`);
+    } else {
+      Alert.alert(titulo, mensagem);
+    }
+  }
+
   function formatarData(valor: Date) {
     const ano = valor.getFullYear();
     const mes = String(valor.getMonth() + 1).padStart(2, "0");
     const dia = String(valor.getDate()).padStart(2, "0");
-
     return `${ano}-${mes}-${dia}`;
   }
 
-  // Formata o horário para HH:MM
   function formatarHorario(valor: Date) {
     const hora = String(valor.getHours()).padStart(2, "0");
     const minuto = String(valor.getMinutes()).padStart(2, "0");
-
     return `${hora}:${minuto}`;
   }
 
-  // Converte YYYY-MM-DD para uma data local
   function converterData(valor: string) {
     const dataTexto = valor.substring(0, 10);
     const [ano, mes, dia] = dataTexto.split("-").map(Number);
-
     return new Date(ano, mes - 1, dia);
   }
 
-  // Carrega as tarefas do usuário
   async function carregarTarefas() {
     try {
       const resposta = await api.get("/tarefas");
       setTarefas(resposta.data.tarefas || []);
     } catch (error: any) {
-      console.log(
-        "Erro ao carregar tarefas:",
-        error.response?.data || error
-      );
-
-      Alert.alert(
+      console.log("Erro ao carregar tarefas:", error.response?.data || error);
+      mostrarAviso(
         "Erro",
         error.response?.data?.mensagem ||
           "Não foi possível carregar suas tarefas."
@@ -96,7 +93,6 @@ export default function Agenda() {
     carregarTarefas();
   }, []);
 
-  // Abre o formulário para cadastrar ou editar
   function abrirModal(tarefa?: Task) {
     setMostrarData(false);
     setMostrarHorario(false);
@@ -107,9 +103,7 @@ export default function Agenda() {
       setDescricao(tarefa.descricao_tarefa || "");
       setData(converterData(tarefa.data_tarefa));
 
-      const [hora, minuto] = (
-        tarefa.horario_tarefa || "12:00"
-      )
+      const [hora, minuto] = (tarefa.horario_tarefa || "12:00")
         .slice(0, 5)
         .split(":")
         .map(Number);
@@ -130,7 +124,6 @@ export default function Agenda() {
     setModalVisivel(true);
   }
 
-  // Fecha o formulário
   function fecharModal() {
     setModalVisivel(false);
     setTarefaEditando(null);
@@ -138,10 +131,9 @@ export default function Agenda() {
     setMostrarHorario(false);
   }
 
-  // Salva uma tarefa nova ou atualiza uma existente
   async function salvarTarefa() {
     if (!nome.trim()) {
-      Alert.alert("Atenção", "Informe o nome da tarefa.");
+      mostrarAviso("Atenção", "Informe o nome da tarefa.");
       return;
     }
 
@@ -156,10 +148,7 @@ export default function Agenda() {
       };
 
       if (tarefaEditando) {
-        await api.patch(
-          `/tarefas/${tarefaEditando.id_tarefa}`,
-          dados
-        );
+        await api.patch(`/tarefas/${tarefaEditando.id_tarefa}`, dados);
       } else {
         await api.post("/tarefas", dados);
       }
@@ -167,19 +156,15 @@ export default function Agenda() {
       fecharModal();
       await carregarTarefas();
 
-      Alert.alert(
+      mostrarAviso(
         "Sucesso",
         tarefaEditando
           ? "Tarefa atualizada com sucesso!"
           : "Tarefa cadastrada com sucesso!"
       );
     } catch (error: any) {
-      console.log(
-        "Erro ao salvar tarefa:",
-        error.response?.data || error
-      );
-
-      Alert.alert(
+      console.log("Erro ao salvar tarefa:", error.response?.data || error);
+      mostrarAviso(
         "Erro",
         error.response?.data?.mensagem ||
           "Não foi possível salvar a tarefa."
@@ -189,12 +174,9 @@ export default function Agenda() {
     }
   }
 
-  // Altera o status da tarefa
   async function alterarStatus(tarefa: Task) {
     const novoStatus =
-      tarefa.status_tarefa === "CONCLUIDA"
-        ? "PENDENTE"
-        : "CONCLUIDA";
+      tarefa.status_tarefa === "CONCLUIDA" ? "PENDENTE" : "CONCLUIDA";
 
     try {
       await api.patch(`/tarefas/${tarefa.id_tarefa}/status`, {
@@ -209,12 +191,8 @@ export default function Agenda() {
         )
       );
     } catch (error: any) {
-      console.log(
-        "Erro ao alterar status:",
-        error.response?.data || error
-      );
-
-      Alert.alert(
+      console.log("Erro ao alterar status:", error.response?.data || error);
+      mostrarAviso(
         "Erro",
         error.response?.data?.mensagem ||
           "Não foi possível atualizar a tarefa."
@@ -222,66 +200,46 @@ export default function Agenda() {
     }
   }
 
-  // Exclui uma tarefa após confirmação
   function confirmarExclusao(id: number) {
-    Alert.alert(
-      "Excluir tarefa",
-      "Tem certeza de que deseja excluir esta tarefa?",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.delete(`/tarefas/${id}`);
-
-              setTarefas((anteriores) =>
-                anteriores.filter(
-                  (tarefa) => tarefa.id_tarefa !== id
-                )
-              );
-
-              Alert.alert(
-                "Sucesso",
-                "Tarefa excluída com sucesso!"
-              );
-            } catch (error: any) {
-              console.log(
-                "Erro ao excluir:",
-                error.response?.data || error
-              );
-
-              Alert.alert(
-                "Erro ao excluir",
-                error.response?.data?.mensagem ||
-                  "Não foi possível excluir a tarefa."
-              );
-            }
-          },
-        },
-      ]
-    );
+    setTarefaParaExcluir(id);
+    setModalExcluirVisivel(true);
   }
 
-  // Formata a data para exibição
+  async function excluirTarefa() {
+    if (tarefaParaExcluir === null) return;
+
+    const id = tarefaParaExcluir;
+
+    try {
+      await api.delete(`/tarefas/${id}`);
+
+      setTarefas((anteriores) =>
+        anteriores.filter((tarefa) => tarefa.id_tarefa !== id)
+      );
+
+      setModalExcluirVisivel(false);
+      setTarefaParaExcluir(null);
+
+      mostrarAviso("Sucesso", "Tarefa excluída com sucesso!");
+    } catch (error: any) {
+      console.log("Erro ao excluir:", error.response?.data || error);
+      mostrarAviso(
+        "Erro ao excluir",
+        error.response?.data?.mensagem ||
+          "Não foi possível excluir a tarefa."
+      );
+    }
+  }
+
   function exibirData(valor: string) {
-    const dataConvertida = converterData(valor);
-
-    return dataConvertida.toLocaleDateString("pt-BR");
+    return converterData(valor).toLocaleDateString("pt-BR");
   }
 
-  // Formata o horário para exibição
   function exibirHorario(valor: string | null) {
     if (!valor) return "Sem horário";
-
     return valor.slice(0, 5);
   }
 
-  // Verifica se uma tarefa já foi concluída
   function tarefaConcluida(tarefa: Task) {
     return tarefa.status_tarefa === "CONCLUIDA";
   }
@@ -294,7 +252,6 @@ export default function Agenda() {
     (tarefa) => tarefa.status_tarefa === "CONCLUIDA"
   ).length;
 
-  // Renderiza cada tarefa
   function renderizarTarefa({ item }: { item: Task }) {
     const concluida = tarefaConcluida(item);
 
@@ -305,15 +262,9 @@ export default function Agenda() {
           onPress={() => alterarStatus(item)}
         >
           <Ionicons
-            name={
-              concluida
-                ? "checkmark-circle"
-                : "ellipse-outline"
-            }
+            name={concluida ? "checkmark-circle" : "ellipse-outline"}
             size={25}
-            color={
-              concluida ? colors.primary : colors.textSecondary
-            }
+            color={concluida ? colors.primary : colors.textSecondary}
           />
         </TouchableOpacity>
 
@@ -335,34 +286,20 @@ export default function Agenda() {
 
           <View style={styles.taskInfo}>
             <View style={styles.infoItem}>
-              <Ionicons
-                name="calendar-outline"
-                size={14}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.infoText}>
-                {exibirData(item.data_tarefa)}
-              </Text>
+              <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.infoText}>{exibirData(item.data_tarefa)}</Text>
             </View>
 
             <View style={styles.infoItem}>
-              <Ionicons
-                name="time-outline"
-                size={14}
-                color={colors.textSecondary}
-              />
-              <Text style={styles.infoText}>
-                {exibirHorario(item.horario_tarefa)}
-              </Text>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.infoText}>{exibirHorario(item.horario_tarefa)}</Text>
             </View>
           </View>
 
           <Text
             style={[
               styles.statusText,
-              concluida
-                ? styles.statusCompleted
-                : styles.statusPending,
+              concluida ? styles.statusCompleted : styles.statusPending,
             ]}
           >
             {concluida ? "Concluída" : "Pendente"}
@@ -374,22 +311,14 @@ export default function Agenda() {
             style={styles.actionButton}
             onPress={() => abrirModal(item)}
           >
-            <Ionicons
-              name="create-outline"
-              size={20}
-              color={colors.primary}
-            />
+            <Ionicons name="create-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => confirmarExclusao(item.id_tarefa)}
           >
-            <Ionicons
-              name="trash-outline"
-              size={20}
-              color={colors.danger}
-            />
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -411,63 +340,36 @@ export default function Agenda() {
           </View>
 
           <View style={styles.headerIcon}>
-            <Ionicons
-              name="calendar"
-              size={26}
-              color={colors.primary}
-            />
+            <Ionicons name="calendar" size={26} color={colors.primary} />
           </View>
         </View>
 
-        {/* Resumo das tarefas */}
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCard}>
             <View style={styles.summaryIconPending}>
-              <Ionicons
-                name="time-outline"
-                size={22}
-                color="#E69A27"
-              />
+              <Ionicons name="time-outline" size={22} color="#E69A27" />
             </View>
-
-            <Text style={styles.summaryNumber}>
-              {pendentes}
-            </Text>
+            <Text style={styles.summaryNumber}>{pendentes}</Text>
             <Text style={styles.summaryLabel}>Pendentes</Text>
           </View>
 
           <View style={styles.summaryCard}>
             <View style={styles.summaryIconCompleted}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={22}
-                color={colors.primary}
-              />
+              <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
             </View>
-
-            <Text style={styles.summaryNumber}>
-              {concluidas}
-            </Text>
+            <Text style={styles.summaryNumber}>{concluidas}</Text>
             <Text style={styles.summaryLabel}>Concluídas</Text>
           </View>
 
           <View style={styles.summaryCard}>
             <View style={styles.summaryIconTotal}>
-              <Ionicons
-                name="list-outline"
-                size={22}
-                color="#5686C5"
-              />
+              <Ionicons name="list-outline" size={22} color="#5686C5" />
             </View>
-
-            <Text style={styles.summaryNumber}>
-              {tarefas.length}
-            </Text>
+            <Text style={styles.summaryNumber}>{tarefas.length}</Text>
             <Text style={styles.summaryLabel}>Total</Text>
           </View>
         </View>
 
-        {/* Título da lista */}
         <View style={styles.listHeader}>
           <Text style={styles.sectionTitle}>Minhas tarefas</Text>
 
@@ -475,46 +377,25 @@ export default function Agenda() {
             style={styles.addButton}
             onPress={() => abrirModal()}
           >
-            <Ionicons
-              name="add"
-              size={21}
-              color={colors.white}
-            />
+            <Ionicons name="add" size={21} color={colors.white} />
             <Text style={styles.addButtonText}>Nova tarefa</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Lista de tarefas */}
         {carregando ? (
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-            style={styles.loading}
-          />
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loading} />
         ) : tarefas.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons
-              name="calendar-outline"
-              size={55}
-              color={colors.textSecondary}
-            />
-
-            <Text style={styles.emptyTitle}>
-              Nenhuma tarefa cadastrada
-            </Text>
-
+            <Ionicons name="calendar-outline" size={55} color={colors.textSecondary} />
+            <Text style={styles.emptyTitle}>Nenhuma tarefa cadastrada</Text>
             <Text style={styles.emptyText}>
-              Adicione sua primeira tarefa para começar a
-              organizar sua rotina.
+              Adicione sua primeira tarefa para começar a organizar sua rotina.
             </Text>
-
             <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => abrirModal()}
             >
-              <Text style={styles.emptyButtonText}>
-                Adicionar tarefa
-              </Text>
+              <Text style={styles.emptyButtonText}>Adicionar tarefa</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -539,17 +420,11 @@ export default function Agenda() {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {tarefaEditando
-                  ? "Editar tarefa"
-                  : "Nova tarefa"}
+                {tarefaEditando ? "Editar tarefa" : "Nova tarefa"}
               </Text>
 
               <TouchableOpacity onPress={fecharModal}>
-                <Ionicons
-                  name="close"
-                  size={25}
-                  color={colors.textSecondary}
-                />
+                <Ionicons name="close" size={25} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -557,10 +432,7 @@ export default function Agenda() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.inputLabel}>
-                Nome da tarefa
-              </Text>
-
+              <Text style={styles.inputLabel}>Nome da tarefa</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Ex: Estudar programação"
@@ -570,10 +442,7 @@ export default function Agenda() {
                 maxLength={100}
               />
 
-              <Text style={styles.inputLabel}>
-                Descrição (opcional)
-              </Text>
-
+              <Text style={styles.inputLabel}>Descrição (opcional)</Text>
               <TextInput
                 style={[styles.input, styles.descriptionInput]}
                 placeholder="Adicione uma descrição..."
@@ -586,7 +455,6 @@ export default function Agenda() {
               />
 
               <Text style={styles.inputLabel}>Data</Text>
-
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => {
@@ -594,42 +462,44 @@ export default function Agenda() {
                   setMostrarData(true);
                 }}
               >
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                 <Text style={styles.dateButtonText}>
                   {data.toLocaleDateString("pt-BR")}
                 </Text>
-
-                <Ionicons
-                  name="chevron-down"
-                  size={18}
-                  color={colors.textSecondary}
-                />
+                <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
 
-              {mostrarData && (
+              {mostrarData && Platform.OS === "web" && (
+                <input
+                  type="date"
+                  value={formatarData(data)}
+                  onChange={(event) => {
+                    const [ano, mes, dia] = event.currentTarget.value.split("-").map(Number);
+                    if (ano && mes && dia) setData(new Date(ano, mes - 1, dia));
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: 12,
+                    marginTop: 8,
+                    border: "1px solid #E2E7DF",
+                    borderRadius: 10,
+                    backgroundColor: "#F1F8EE",
+                    color: "#37474F",
+                    fontSize: 14,
+                  }}
+                />
+              )}
+
+              {mostrarData && Platform.OS !== "web" && (
                 <DateTimePicker
                   value={data}
                   mode="date"
-                  display={
-                    Platform.OS === "ios" ? "spinner" : "default"
-                  }
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
                   minimumDate={new Date(2000, 0, 1)}
-                  onChange={(
-                    event: DateTimePickerEvent,
-                    selectedDate?: Date
-                  ) => {
-                    if (Platform.OS === "android") {
-                      setMostrarData(false);
-                    }
-
-                    if (selectedDate) {
-                      setData(selectedDate);
-                    }
+                  onChange={(event, selectedDate) => {
+                    if (Platform.OS === "android") setMostrarData(false);
+                    if (selectedDate) setData(selectedDate);
                   }}
                 />
               )}
@@ -639,14 +509,11 @@ export default function Agenda() {
                   style={styles.pickerDone}
                   onPress={() => setMostrarData(false)}
                 >
-                  <Text style={styles.pickerDoneText}>
-                    Confirmar data
-                  </Text>
+                  <Text style={styles.pickerDoneText}>Confirmar data</Text>
                 </TouchableOpacity>
               )}
 
               <Text style={styles.inputLabel}>Horário</Text>
-
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => {
@@ -654,42 +521,46 @@ export default function Agenda() {
                   setMostrarHorario(true);
                 }}
               >
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-
-                <Text style={styles.dateButtonText}>
-                  {formatarHorario(horario)}
-                </Text>
-
-                <Ionicons
-                  name="chevron-down"
-                  size={18}
-                  color={colors.textSecondary}
-                />
+                <Ionicons name="time-outline" size={20} color={colors.primary} />
+                <Text style={styles.dateButtonText}>{formatarHorario(horario)}</Text>
+                <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
 
-              {mostrarHorario && (
+              {mostrarHorario && Platform.OS === "web" && (
+                <input
+                  type="time"
+                  value={formatarHorario(horario)}
+                  onChange={(event) => {
+                    const [hora, minuto] = event.currentTarget.value.split(":").map(Number);
+                    if (Number.isFinite(hora) && Number.isFinite(minuto)) {
+                      const novoHorario = new Date(horario);
+                      novoHorario.setHours(hora, minuto, 0, 0);
+                      setHorario(novoHorario);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: 12,
+                    marginTop: 8,
+                    border: "1px solid #E2E7DF",
+                    borderRadius: 10,
+                    backgroundColor: "#F1F8EE",
+                    color: "#37474F",
+                    fontSize: 14,
+                  }}
+                />
+              )}
+
+              {mostrarHorario && Platform.OS !== "web" && (
                 <DateTimePicker
                   value={horario}
                   mode="time"
                   is24Hour
-                  display={
-                    Platform.OS === "ios" ? "spinner" : "default"
-                  }
-                  onChange={(
-                    event: DateTimePickerEvent,
-                    selectedTime?: Date
-                  ) => {
-                    if (Platform.OS === "android") {
-                      setMostrarHorario(false);
-                    }
-
-                    if (selectedTime) {
-                      setHorario(selectedTime);
-                    }
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={(event, selectedTime) => {
+                    if (Platform.OS === "android") setMostrarHorario(false);
+                    if (selectedTime) setHorario(selectedTime);
                   }}
                 />
               )}
@@ -699,9 +570,7 @@ export default function Agenda() {
                   style={styles.pickerDone}
                   onPress={() => setMostrarHorario(false)}
                 >
-                  <Text style={styles.pickerDoneText}>
-                    Confirmar horário
-                  </Text>
+                  <Text style={styles.pickerDoneText}>Confirmar horário</Text>
                 </TouchableOpacity>
               )}
 
@@ -711,9 +580,7 @@ export default function Agenda() {
                   onPress={fecharModal}
                   disabled={salvando}
                 >
-                  <Text style={styles.cancelButtonText}>
-                    Cancelar
-                  </Text>
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -725,14 +592,56 @@ export default function Agenda() {
                     <ActivityIndicator color={colors.white} />
                   ) : (
                     <Text style={styles.saveButtonText}>
-                      {tarefaEditando
-                        ? "Salvar alterações"
-                        : "Salvar tarefa"}
+                      {tarefaEditando ? "Salvar alterações" : "Salvar tarefa"}
                     </Text>
                   )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmação de exclusão */}
+      <Modal
+        visible={modalExcluirVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setModalExcluirVisivel(false);
+          setTarefaParaExcluir(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="trash-outline" size={27} color={colors.danger} />
+            </View>
+
+            <Text style={styles.confirmTitle}>Excluir tarefa?</Text>
+            <Text style={styles.confirmText}>
+              Tem certeza de que deseja excluir esta tarefa?
+              Essa ação não poderá ser desfeita.
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setModalExcluirVisivel(false);
+                  setTarefaParaExcluir(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, { backgroundColor: colors.danger }]}
+                onPress={excluirTarefa}
+              >
+                <Text style={styles.saveButtonText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -745,12 +654,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-
   scrollContent: {
     padding: 20,
     paddingBottom: 35,
   },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -758,19 +665,16 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     marginTop: 10,
   },
-
   headerTitle: {
     fontSize: 25,
     fontWeight: "bold",
     color: colors.text,
   },
-
   headerSubtitle: {
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 5,
   },
-
   headerIcon: {
     width: 48,
     height: 48,
@@ -779,13 +683,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   summaryContainer: {
     flexDirection: "row",
     gap: 10,
     marginBottom: 30,
   },
-
   summaryCard: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -794,7 +696,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 2,
   },
-
   summaryIconPending: {
     width: 38,
     height: 38,
@@ -804,7 +705,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   summaryIconCompleted: {
     width: 38,
     height: 38,
@@ -814,7 +714,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   summaryIconTotal: {
     width: 38,
     height: 38,
@@ -824,32 +723,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   summaryNumber: {
     fontSize: 21,
     fontWeight: "bold",
     color: colors.text,
   },
-
   summaryLabel: {
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 3,
   },
-
   listHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
   },
-
   sectionTitle: {
     fontSize: 19,
     fontWeight: "bold",
     color: colors.text,
   },
-
   addButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -859,17 +753,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 5,
   },
-
   addButtonText: {
     color: colors.white,
     fontSize: 12,
     fontWeight: "bold",
   },
-
   taskList: {
     gap: 12,
   },
-
   taskCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -878,80 +769,65 @@ const styles = StyleSheet.create({
     padding: 14,
     elevation: 2,
   },
-
   checkButton: {
     paddingTop: 2,
     paddingRight: 10,
   },
-
   taskContent: {
     flex: 1,
   },
-
   taskName: {
     fontSize: 15,
     fontWeight: "bold",
     color: colors.text,
   },
-
   taskCompleted: {
     textDecorationLine: "line-through",
     color: colors.textSecondary,
   },
-
   taskDescription: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 5,
     lineHeight: 18,
   },
-
   taskInfo: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 13,
     marginTop: 10,
   },
-
   infoItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-
   infoText: {
     fontSize: 11,
     color: colors.textSecondary,
   },
-
   statusText: {
     fontSize: 11,
     fontWeight: "bold",
     marginTop: 9,
   },
-
   statusPending: {
     color: "#D18A1B",
   },
-
   statusCompleted: {
     color: colors.primary,
   },
-
   taskActions: {
     flexDirection: "row",
     alignItems: "center",
     marginLeft: 5,
   },
-
   actionButton: {
     padding: 7,
   },
-
   loading: {
     marginTop: 50,
   },
-
   emptyContainer: {
     backgroundColor: colors.surface,
     borderRadius: 15,
@@ -959,14 +835,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-
   emptyTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: colors.text,
     marginTop: 15,
   },
-
   emptyText: {
     fontSize: 13,
     color: colors.textSecondary,
@@ -974,7 +848,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 8,
   },
-
   emptyButton: {
     backgroundColor: colors.primary,
     borderRadius: 10,
@@ -982,40 +855,64 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     marginTop: 18,
   },
-
   emptyButtonText: {
     color: colors.white,
     fontWeight: "bold",
     fontSize: 13,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.overlay,
     justifyContent: "center",
     padding: 20,
   },
-
   modalContainer: {
     backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 20,
     maxHeight: "90%",
   },
-
+  confirmModal: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 22,
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+    alignItems: "center",
+  },
+  confirmIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.dangerBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  confirmTitle: {
+    fontSize: 19,
+    fontWeight: "bold",
+    color: colors.text,
+  },
+  confirmText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginTop: 8,
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 22,
   },
-
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: colors.text,
   },
-
   inputLabel: {
     fontSize: 13,
     fontWeight: "bold",
@@ -1023,7 +920,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
-
   input: {
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -1034,12 +930,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-
   descriptionInput: {
     height: 85,
     textAlignVertical: "top",
   },
-
   dateButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1050,31 +944,26 @@ const styles = StyleSheet.create({
     padding: 13,
     gap: 10,
   },
-
   dateButtonText: {
     flex: 1,
     fontSize: 14,
     color: colors.text,
   },
-
   pickerDone: {
     alignSelf: "flex-end",
     paddingVertical: 9,
     paddingHorizontal: 5,
   },
-
   pickerDoneText: {
     color: colors.primary,
     fontWeight: "bold",
   },
-
   modalButtons: {
     flexDirection: "row",
     gap: 10,
     marginTop: 25,
     marginBottom: 5,
   },
-
   cancelButton: {
     flex: 1,
     padding: 14,
@@ -1083,13 +972,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: "center",
   },
-
   cancelButtonText: {
     color: colors.textSecondary,
     fontWeight: "bold",
     fontSize: 13,
   },
-
   saveButton: {
     flex: 1,
     padding: 14,
@@ -1098,7 +985,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   saveButtonText: {
     color: colors.white,
     fontWeight: "bold",
