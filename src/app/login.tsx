@@ -171,17 +171,66 @@ export default function Login() {
       // SALVA TOKEN E USUÁRIO
       // ======================================
 
-      await AsyncStorage.setItem(
-        "token",
-        token
-      );
+      // ======================================
+// SALVA TOKEN E USUÁRIO
+// ======================================
 
-      await AsyncStorage.setItem(
-        "usuario",
-        JSON.stringify(usuario)
-      );
+await AsyncStorage.setItem(
+  "token",
+  token
+);
 
-      setTokenAtual(token);
+await AsyncStorage.setItem(
+  "usuario",
+  JSON.stringify(usuario)
+);
+
+setTokenAtual(token);
+
+// ======================================
+// VERIFICA SE É ADMINISTRADOR
+// ======================================
+
+if (usuario.is_admin === true) {
+  router.replace("/admin");
+  return;
+}
+
+// ======================================
+// DESCOBRE SE JÁ É CLIENTE
+// ======================================
+
+try {
+  await api.get(
+    "/clientes/me",
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  // Já possui cadastro de cliente
+  router.replace(
+    "/(tabs)/home"
+  );
+
+} catch (clienteError: any) {
+
+  // 404 significa que existe como usuário,
+  // mas ainda não possui perfil de cliente.
+
+  if (
+    clienteError.response?.status === 404
+  ) {
+    setModalCliente(true);
+
+    return;
+  }
+
+  throw clienteError;
+}
 
       // ======================================
       // DESCOBRE SE JÁ É CLIENTE
