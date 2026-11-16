@@ -68,10 +68,10 @@ export default function Home() {
 
       {/* CALCULADORA */}
       <TouchableOpacity
-        style={styles.optionCard}
-        activeOpacity={0.8}
-        
-      >
+      style={styles.optionCard}
+      activeOpacity={0.8}
+      onPress={() => router.push("/(tabs)/calculadora" as any)}
+    >
         <View style={styles.optionIcon}>
           <Ionicons
             name="calculator-outline"
